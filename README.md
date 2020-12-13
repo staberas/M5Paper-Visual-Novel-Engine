@@ -7,4 +7,4 @@ Features that will be soon added:
   1. Bookmark
   2. Index - Chapter select
   3. Novel selection - Menu
-  4. Button integration for next-prev page
+ ~~ 4. Button integration for next-prev page~~
