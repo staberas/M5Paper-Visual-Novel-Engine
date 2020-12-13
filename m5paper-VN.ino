@@ -60,6 +60,54 @@ void setup()
 
 void loop()
 {
+  if (M5.BtnR.read()){
+    //next page button
+    Serial.println(M5.BtnR.read());
+    M5.EPD.SetRotation(0);
+    canvas.deleteCanvas();
+    canvas.createCanvas(650, 140);
+    canvas.setTextSize(3);
+    loadnovel(pages,"avatar");
+    String prevsrc = pageobjx; 
+    pages++;
+    loadnovel(pages, "avatar");
+    if(prevsrc != pageobjx){
+    batlog = "Loading next page";
+    canvas.println(batlog);  
+    canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
+      actiondone(true);
+    }else{
+    canvas.setTextArea(200,400,500,140);
+    loadnovel(pages,"text");
+    canvas.println(pageobjx.c_str());
+    canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
+    delay(2000);
+    }
+  };
+  if(M5.BtnL.read()){
+    //prev page button
+    Serial.println(M5.BtnL.read());
+    M5.EPD.SetRotation(0);
+    canvas.deleteCanvas();
+    canvas.createCanvas(650, 140);
+    canvas.setTextSize(3);
+    loadnovel(pages,"avatar");
+    String prevsrc = pageobjx;  
+    pages--;
+    loadnovel(pages,"avatar");
+    if(prevsrc != pageobjx){
+    batlog = "Loading previous page";
+    canvas.println(batlog);  
+    canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
+    actiondone(true);
+    }else{
+    canvas.setTextArea(200,400,500,140);
+    loadnovel(pages,"text");
+    canvas.println(pageobjx.c_str());
+    canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
+    delay(2000); 
+    }
+  };
   bool valueupdate = false;
   //TOUCH INTERFACE
     if(M5.TP.avaliable()){
