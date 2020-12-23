@@ -2,8 +2,7 @@
 #include <ArduinoJson.h>
 
     int randNumber;
-
-//page current
+    //page current
     int pages = 0;
     char* json;
     const char *filename = "/noveldemo.txt"; //here is the novel json file
@@ -15,6 +14,7 @@
     int dmg = 120;
     String batlog;
     String pagename;
+    boolean batticon = true;
       
 void setup()
 {
@@ -56,10 +56,45 @@ void setup()
     //nextload(true); 
     //prevload(true);
     avatarload();
+    
 }
 
 void loop()
 {
+    
+  if (M5.BtnP.read() && M5.BtnP.pressedFor(500) && batticon){
+    canvas.deleteCanvas();
+    M5.EPD.SetRotation(0);
+    canvas.createCanvas(80, 40);
+    canvas.setTextSize(4);
+    // Battery
+    uint32_t vol = M5.getBatteryVoltage();
+    if(vol < 3300)
+    {
+        vol = 3300;
+    }
+    else if(vol > 4350)
+    {
+        vol = 4350;
+    }
+    float battery = (float)(vol - 3300) / (float)(4350 - 3300);
+    if(battery <= 0.01)
+    {
+        battery = 0.01;
+    }
+    if(battery > 1)
+    {
+        battery = 1;
+    }
+    uint8_t px = battery * 25;
+    canvas.setTextArea(5,5,80,40);
+    int battpercent = battery*100;
+    canvas.println( String(battpercent)+"%");
+    //printf( "%d%%", (int)(battery * 100));
+    canvas.pushCanvas(0,0,UPDATE_MODE_GL16);
+    batticon = false;
+  };
+
   if (M5.BtnR.read()){
     //next page button
     Serial.println(M5.BtnR.read());
@@ -76,6 +111,7 @@ void loop()
     canvas.println(batlog);  
     canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
       actiondone(true);
+      batticon = true;
     }else{
     canvas.setTextArea(200,400,500,140);
     loadnovel(pages,"text");
@@ -83,7 +119,9 @@ void loop()
     canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
     delay(2000);
     }
+    loadinteractions(selectionblock);
   };
+  
   if(M5.BtnL.read()){
     //prev page button
     Serial.println(M5.BtnL.read());
@@ -100,6 +138,7 @@ void loop()
     canvas.println(batlog);  
     canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
     actiondone(true);
+    batticon = true;
     }else{
     canvas.setTextArea(200,400,500,140);
     loadnovel(pages,"text");
@@ -134,7 +173,29 @@ void loop()
         }
     }
     //TOUCH interface end
-
+    
+    //Touch UI for routes
+    if(selectionnum > 0){
+      if ((M5.TP.readFingerX(0) > 320) && (M5.TP.readFingerY(0) > 30) && (M5.TP.readFingerX(0) < 600) && (M5.TP.readFingerY(0) < 80) && (selectionnum >= 1) ){
+      Serial.println("choice 1 route");
+      decisiontree(1);
+      }
+      if ((M5.TP.readFingerX(0) > 320) && (M5.TP.readFingerY(0) > 120) && (M5.TP.readFingerX(0) < 600) && (M5.TP.readFingerY(0) < 170) && (selectionnum >= 2) ){
+      Serial.println("choice 2 route");
+      //  canvas.fillCircle(320,20,20,5);
+      decisiontree(2);     
+      }
+      if ((M5.TP.readFingerX(0) > 320) && (M5.TP.readFingerY(0) > 190) && (M5.TP.readFingerX(0) < 600) && (M5.TP.readFingerY(0) < 240) && (selectionnum >= 3) ){
+      Serial.println("choice 3 route"); 
+      //  canvas.fillCircle(320,20,20,5);
+      decisiontree(3);      
+      }
+      if ((M5.TP.readFingerX(0) > 320) && (M5.TP.readFingerY(0) > 260) && (M5.TP.readFingerX(0) < 600) && (M5.TP.readFingerY(0) < 310) && (selectionnum == 4) ){
+      Serial.println("choice 4 route");
+      //  canvas.fillCircle(320,20,20,5);
+      decisiontree(4);
+      }                  
+    }
 //main game logic or anything else
 
 
@@ -164,6 +225,7 @@ if ((M5.TP.readFingerX(0) > 10) && (M5.TP.readFingerY(0) > 65) && (M5.TP.readFin
     canvas.pushCanvas(280,400,UPDATE_MODE_GL16);
     delay(2000);
     }
+    loadinteractions(selectionblock);
 }
 //prev butt
 if ((M5.TP.readFingerX(0) > 100) && (M5.TP.readFingerY(0) > 65) && (M5.TP.readFingerX(0) < 170) && (M5.TP.readFingerY(0) < 160) && valueupdate)
@@ -283,6 +345,13 @@ File file = SD.open(filename);
 JsonObject& root = jsonBuffer.parseObject(file);
 JsonVariant pageobj = root[pagenamed][0];
 pageobjx = pageobj[item].as<String>();
+//interactivity on page
+Serial.println(pageobj["choices"][0].as<String>());
+Serial.println(pageobj["choices"][0]["choice1"].as<String>());
+if( pageobj["jumps"][0].success() || pageobj["choices"][0].success() ){  //fix line
+  selectionblock = true;
+  Serial.println("selectionblock true");
+}
 if(root.size() <= pages){
 Serial.println("no-new-page in json ");
 pages--;
@@ -303,4 +372,122 @@ void avatarload(){
   loadnovel(pages,"avatar");
   canvas.drawPngFile(SD, pageobjx.c_str(),0,0);
   //canvas.drawPngFile(SD, pageobjx,0,0);
+}
+
+void loadinteractions(boolean selectionblock){
+//if true load the ui 
+Serial.println("inside in loadinteraction");
+if (selectionblock){
+  //canvas
+  Serial.println("interaction true");
+  //canvas.setTextArea(200,150,150,150);
+  //end canvas
+const size_t capacity = 2*JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(3) + 240;
+DynamicJsonBuffer jsonBuffer(capacity);
+File file = SD.open(filename);
+JsonObject& root = jsonBuffer.parseObject(file);
+JsonVariant pageobj = root["page"+String(pages)][0]["choices"][0];
+//interactivity on page
+int i = 1;
+String choicenum = "choice"+String(i);
+pageobjx = pageobj[choicenum].as<String>();
+Serial.println(pageobjx);
+while(pageobjx.length() > 0){
+//pageobj.["choice"+String(i)]
+//---canvas.println(pageobjx);
+if(i == 1){ 
+  canvas.deleteCanvas();//
+  canvas.createCanvas(250, 40);
+  canvas.setTextSize(3);
+  canvas.fillCircle(0,20,20,5);
+  canvas.fillCircle(250,20,20,5);
+  if(pageobjx.length() > 3){ 
+    canvas.drawString(pageobjx, pageobjx.length()-3*-15, 10); 
+    }
+  else{ 
+    canvas.drawString(pageobjx, 100, 10); 
+    }
+  canvas.pushCanvas(320,50,UPDATE_MODE_GL16);
+ }else if (i ==  2){ 
+  canvas.deleteCanvas();//
+  canvas.createCanvas(250, 40);
+  canvas.setTextSize(3);
+  canvas.fillCircle(0,20,20,5);  
+  canvas.fillCircle(250,20,20,5);
+  if(pageobjx.length() > 3){ 
+    canvas.drawString(pageobjx, pageobjx.length()-3*-15, 10); 
+    }
+  else{ 
+    canvas.drawString(pageobjx, 100, 10); 
+    } 
+  canvas.pushCanvas(320,120,UPDATE_MODE_GL16);
+ } else if(i == 3){ 
+  canvas.deleteCanvas();//
+  canvas.createCanvas(250, 40);
+  canvas.setTextSize(3);
+  canvas.fillCircle(0,20,20,5);  
+  canvas.fillCircle(250,20,20,5);  
+  if(pageobjx.length() > 3){ 
+    canvas.drawString(pageobjx, pageobjx.length()-3*-15, 10); 
+    }
+  else{ 
+    canvas.drawString(pageobjx, 100, 10); 
+    }  
+  canvas.pushCanvas(320,190,UPDATE_MODE_GL16);
+ }else{ 
+  canvas.deleteCanvas();//
+  canvas.createCanvas(250, 40);
+  canvas.setTextSize(3);
+  canvas.fillCircle(0,20,20,5);  
+  canvas.fillCircle(250,20,20,5);  
+  if(pageobjx.length() > 3){ 
+    canvas.drawString(pageobjx, pageobjx.length()-3*-15, 10); 
+    }
+  else{ 
+    canvas.drawString(pageobjx, 100, 10); 
+    }
+  canvas.pushCanvas(320,260,UPDATE_MODE_GL16);
+ }
+//canvas.println("This");
+i++;
+choicenum = "choice"+String(i);
+pageobjx = pageobj[choicenum].as<String>();
+selectionnum = i-1;
+}
+//newline wrap
+//canvas.pushCanvas(280,200,UPDATE_MODE_GL16);
+delay(1000);
+  }
+selectionblock = false;
+}
+
+void decisiontree(int selected){
+
+  //check json and do action
+const size_t capacity = 2*JSON_ARRAY_SIZE(1) + JSON_OBJECT_SIZE(2) + 2*JSON_OBJECT_SIZE(3) + 240;
+DynamicJsonBuffer jsonBuffer(capacity);
+File file = SD.open(filename);
+JsonObject& root = jsonBuffer.parseObject(file);
+JsonVariant pageobj = root["page"+String(pages)][0]["jumps"][0];
+//jump to page or chapter (file) 
+String jumpnum = "jump"+String(selected);
+pageobjx = pageobj[jumpnum].as<String>();
+Serial.println(pageobjx);
+if(String(pageobjx.charAt(0)) == "p"){
+  //page skip interaction
+  Serial.println("Page SKIP");
+  pageobjx.replace("page"," ");
+  pages = pageobjx.toInt();
+  selectionnum = 0;
+  actiondone(true);
+}
+if(String(pageobjx.charAt(0)) == "/"){
+  //change chapter (filename at root)
+  Serial.println("setting new Filename for chapter");
+  filename = pageobjx;
+  Serial.println(pageobjx);
+  pages = 0;
+  selectionnum = 0;    
+  actiondone(true);
+ }
 }
