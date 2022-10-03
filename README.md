@@ -17,3 +17,6 @@ Features that will be soon added:
  ~~7. Display Battery %~~
  
 Anyone who needs the edge version of the engine (that want to develop seriously on the M5Paper) send an request on issues. Currently i have implemented couple of features that wont be featured here yet but will give out to anyone who is seriously developing on the M5Paper. 
+
+
+VN DEMO https://staberas.itch.io/alex-kroven-the-mage-detective 
